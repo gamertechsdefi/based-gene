@@ -29,8 +29,8 @@ export default function Home() {
                 } else {
                     setBackgroundChoice(""); // Reset if no backgrounds
                 }
-            } catch (err: any) {
-                setError(err.message);
+            } catch {
+                setError("Could not select image");
             }
         }
         fetchBackgrounds();
@@ -77,8 +77,8 @@ export default function Home() {
             } else {
                 throw new Error(data.error || "Failed to process image");
             }
-        } catch (error: any) {
-            setError(error.message);
+        } catch {
+            setError("failed to apply background");
         } finally {
             setLoading(false);
         }
@@ -111,8 +111,8 @@ export default function Home() {
             } else {
                 throw new Error(data.error || "Failed to tint image");
             }
-        } catch (err: any) {
-            setError(err.message);
+        } catch {
+            setError("Error occured while trying to apply tint");
         } finally {
             setLoading(false);
         }
@@ -130,8 +130,8 @@ export default function Home() {
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-        } catch (err: any) {
-            setError(err.message);
+        } catch {
+            setError("Failed to download image");
         }
     };
 
