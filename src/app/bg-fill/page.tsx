@@ -21,7 +21,7 @@ export default function Home() {
     useEffect(() => {
         async function fetchBackgrounds() {
             try {
-                const response = await fetch(`http://localhost:5000/background-count?projectType=${projectType}`);
+                const response = await fetch(`https://based-gene-api.vercel.app/background-count?projectType=${projectType}`);
                 const data = await response.json();
                 setBackgrounds(data.backgrounds || []);
                 if (data.backgrounds.length > 0) {
@@ -66,7 +66,7 @@ export default function Home() {
         formData.append("backgroundChoice", backgroundChoice); // Send full filename (e.g., "background1.png")
 
         try {
-            const response = await fetch("http://localhost:5000/upload", {
+            const response = await fetch("https://based-gene-api.vercel.app/upload", {
                 method: "POST",
                 body: formData,
             });
@@ -100,7 +100,7 @@ export default function Home() {
         formData.append("image", blob, "processed-image.png");
 
         try {
-            const tintResponse = await fetch("http://localhost:5000/tint", {
+            const tintResponse = await fetch("https://based-gene-api.vercel.app/tint", {
                 method: "POST",
                 body: formData,
             });
