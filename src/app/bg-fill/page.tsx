@@ -4,286 +4,315 @@ import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Image from "next/image";
 import Header from "@/components/Header";
 
+const BACKEND_URL = "http://localhost:5000"; // Centralized backend URL
+
 export default function Home() {
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const [processedImage, setProcessedImage] = useState<string | null>(null);
-    const [tintedImage, setTintedImage] = useState<string | null>(null);
-    const [projectType, setProjectType] = useState<string>("base");
-    const [backgroundChoice, setBackgroundChoice] = useState<string>("background1.png");
-    const [backgrounds, setBackgrounds] = useState<string[]>([]);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [processedImage, setProcessedImage] = useState<string | null>(null);
+  const [tintedImage, setTintedImage] = useState<string | null>(null);
+  const [projectType, setProjectType] = useState<string>("base");
+  const [backgroundChoice, setBackgroundChoice] = useState<string>("background1.png");
+  const [backgrounds, setBackgrounds] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-    // Define available project types
-    const projectTypes = ["base", "send", "enb"];
+  const projectTypes = ["base", "send", "enb"];
 
-    // Fetch available backgrounds for the selected project type
-    useEffect(() => {
-        async function fetchBackgrounds() {
-            try {
-                const response = await fetch(`https://based-gene-api.vercel.app/background-count?projectType=${projectType}`);
-                const data = await response.json();
-                setBackgrounds(data.backgrounds || []);
-                if (data.backgrounds.length > 0) {
-                    setBackgroundChoice(data.backgrounds[0]); // Default to the first background
-                } else {
-                    setBackgroundChoice(""); // Reset if no backgrounds
-                }
-            } catch {
-                setError("Could not select image");
-            }
+  // Fetch available backgrounds for the selected project type
+  useEffect(() => {
+    async function fetchBackgrounds() {
+      try {
+        console.log(`Fetching backgrounds from: ${BACKEND_URL}/background-count?projectType=${projectType}`);
+        const response = await fetch(`${BACKEND_URL}/background-count?projectType=${projectType}`);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to fetch backgrounds: ${response.status} - ${errorText}`);
         }
-        fetchBackgrounds();
-    }, [projectType]);
+        const data = await response.json();
+        console.log("Backgrounds received:", data);
+        setBackgrounds(data.backgrounds || []);
+        setBackgroundChoice(data.backgrounds[0] || ""); // Default to first or empty
+      } catch (err) {
+        const errorMessage = (err as Error).message || "Could not fetch backgrounds";
+        console.error("Fetch error:", err);
+        setError(errorMessage);
+        setBackgrounds([]);
+        setBackgroundChoice("");
+      }
+    }
+    fetchBackgrounds();
+  }, [projectType]);
 
-    const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setSelectedImage(URL.createObjectURL(file));
-            setProcessedImage(null);
-            setTintedImage(null);
-            setError(null);
-        }
-    };
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(URL.createObjectURL(file));
+      setProcessedImage(null);
+      setTintedImage(null);
+      setError(null);
+    }
+  };
 
-    const handleProjectTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
-        setProjectType(e.target.value);
-    };
+  const handleProjectTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setProjectType(e.target.value);
+  };
 
-    const handleBackgroundChange = (e: ChangeEvent<HTMLSelectElement>) => {
-        setBackgroundChoice(e.target.value);
-    };
+  const handleBackgroundChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setBackgroundChoice(e.target.value);
+  };
 
-    const handleBackgroundUpdate = async (e: FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-        setProcessedImage(null);
-        setTintedImage(null);
+  const handleBackgroundUpdate = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedImage) {
+      setError("Please select an image first");
+      return;
+    }
 
-        const formData = new FormData(e.currentTarget);
-        formData.append("projectType", projectType);
-        formData.append("backgroundChoice", backgroundChoice); // Send full filename (e.g., "background1.png")
+    setLoading(true);
+    setError(null);
+    setProcessedImage(null);
+    setTintedImage(null);
 
-        try {
-            const response = await fetch("https://based-gene-api.vercel.app/upload", {
-                method: "POST",
-                body: formData,
-            });
+    const formData = new FormData(e.currentTarget);
+    formData.append("projectType", projectType);
+    formData.append("backgroundChoice", backgroundChoice);
 
-            const data = await response.json();
-            if (data.processedImageUrl) {
-                setProcessedImage(data.processedImageUrl);
-            } else {
-                throw new Error(data.error || "Failed to process image");
-            }
-        } catch {
-            setError("failed to apply background");
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+      console.log(`Sending to ${BACKEND_URL}/upload`);
+      const response = await fetch(`${BACKEND_URL}/upload`, {
+        method: "POST",
+        body: formData,
+      });
 
-    const handleTint = async () => {
-        if (!processedImage) {
-            setError("Please update the background first.");
-            return;
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || `Failed to process image: ${response.status}`);
+      }
 
-        setLoading(true);
-        setError(null);
-        setTintedImage(null);
+      const data = await response.json();
+      if (data.processedImageUrl) {
+        setProcessedImage(data.processedImageUrl);
+      } else {
+        throw new Error("No processed image URL returned");
+      }
+    } catch (err) {
+      const errorMessage = (err as Error).message || "Failed to apply background";
+      console.error("Background update error:", err);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        const response = await fetch(processedImage);
-        const blob = await response.blob();
-        const formData = new FormData();
-        formData.append("image", blob, "processed-image.png");
+  const handleTint = async () => {
+    if (!processedImage) {
+      setError("Please update the background first.");
+      return;
+    }
 
-        try {
-            const tintResponse = await fetch("https://based-gene-api.vercel.app/tint", {
-                method: "POST",
-                body: formData,
-            });
+    setLoading(true);
+    setError(null);
+    setTintedImage(null);
 
-            const data = await tintResponse.json();
-            if (data.processedImageUrl) {
-                setTintedImage(data.processedImageUrl);
-            } else {
-                throw new Error(data.error || "Failed to tint image");
-            }
-        } catch {
-            setError("Error occured while trying to apply tint");
-        } finally {
-            setLoading(false);
-        }
-    };
+    try {
+      // Convert base64 processedImage to Blob
+      const response = await fetch(processedImage);
+      const blob = await response.blob();
+      const formData = new FormData();
+      formData.append("image", blob, "processed-image.png");
 
-    const handleDownload = async (imageUrl: string, filename: string) => {
-        try {
-            const response = await fetch(imageUrl);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-        } catch {
-            setError("Failed to download image");
-        }
-    };
+      console.log(`Sending to ${BACKEND_URL}/tint`);
+      const tintResponse = await fetch(`${BACKEND_URL}/tint`, {
+        method: "POST",
+        body: formData,
+      });
 
-    return (
-        <div>
-            <Header />
-            <div className="flex flex-col min-h-screen">
-                <main className="flex-grow mt-16 px-4 py-8 sm:px-6 lg:px-8">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="bg-neutral-800 p-6 rounded-lg shadow-md">
-                            <h1 className="text-3xl font-bold text-[#1A3CFF] mb-6 text-center">
-                                Background Updater
-                            </h1>
-                            <form onSubmit={handleBackgroundUpdate} className="space-y-4">
-                                <div>
-                                    <label htmlFor="image" className="block mb-2">
-                                        Select Image
-                                    </label>
-                                    <input
-                                        type="file"
-                                        name="image"
-                                        id="image"
-                                        accept="image/*"
-                                        onChange={handleImageChange}
-                                        required
-                                        className="w-full p-2 border-2 border-dashed border-[#66D4FF] rounded-md text-gray-700"
-                                    />
-                                </div>
+      if (!tintResponse.ok) {
+        const errorData = await tintResponse.json();
+        throw new Error(errorData.details || errorData.error || `Failed to tint image: ${tintResponse.status}`);
+      }
 
-                                <div>
-                                    <label htmlFor="projectType" className="block mb-2">
-                                        Select Project Type
-                                    </label>
-                                    <select
-                                        id="projectType"
-                                        value={projectType}
-                                        onChange={handleProjectTypeChange}
-                                        className="w-full p-2 border border-gray-300 rounded-md text-gray-700"
-                                    >
-                                        {projectTypes.map((type) => (
-                                            <option key={type} value={type}>
-                                                {type.charAt(0).toUpperCase() + type.slice(1)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+      const data = await tintResponse.json();
+      if (data.processedImageUrl) {
+        setTintedImage(data.processedImageUrl);
+      } else {
+        throw new Error("No tinted image URL returned");
+      }
+    } catch (err) {
+      const errorMessage = (err as Error).message || "Error occurred while trying to apply tint";
+      console.error("Tint error:", err);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                                <div>
-                                    <label htmlFor="backgroundChoice" className="block mb-2">
-                                        Select Background ({backgrounds.length} available)
-                                    </label>
-                                    <select
-                                        id="backgroundChoice"
-                                        value={backgroundChoice}
-                                        onChange={handleBackgroundChange}
-                                        className="w-full p-2 border border-gray-300 rounded-md text-gray-700"
-                                        disabled={backgrounds.length === 0}
-                                    >
-                                        {backgrounds.length > 0 ? (
-                                            backgrounds.map((bg) => (
-                                                <option key={bg} value={bg}>
-                                                    {bg}
-                                                </option>
-                                            ))
-                                        ) : (
-                                            <option value="">No backgrounds available</option>
-                                        )}
-                                    </select>
-                                </div>
+  const handleDownload = async (imageUrl: string, filename: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      setError("Failed to download image");
+    }
+  };
 
-                                <button
-                                    type="submit"
-                                    disabled={loading || backgrounds.length === 0}
-                                    className="w-full bg-[#1A3CFF] text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
-                                >
-                                    {loading ? "Processing..." : "Update Background"}
-                                </button>
-                            </form>
+  return (
+    <div>
+      <Header />
+      <div className="flex flex-col min-h-screen">
+        <main className="flex-grow mt-16 px-4 py-8 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-neutral-800 p-6 rounded-lg shadow-md">
+              <h1 className="text-3xl font-bold text-[#1A3CFF] mb-6 text-center">
+                Background Updater
+              </h1>
+              <form onSubmit={handleBackgroundUpdate} className="space-y-4">
+                <div>
+                  <label htmlFor="image" className="block mb-2 text-white">
+                    Select Image
+                  </label>
+                  <input
+                    type="file"
+                    name="image"
+                    id="image"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    required
+                    className="w-full p-2 border-2 border-dashed border-[#66D4FF] rounded-md text-gray-700 bg-white"
+                  />
+                </div>
 
-                            {/* Image Previews */}
-                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {selectedImage && (
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-gray-700 mb-2">Preview</h2>
-                                        <Image
-                                            src={selectedImage}
-                                            alt="Preview"
-                                            width={500}
-                                            height={500}
-                                            className="w-full h-auto rounded-md object-contain"
-                                        />
-                                    </div>
-                                )}
-                                {processedImage && (
-                                    <div>
-                                        <h2 className="text-lg font-semibold text-gray-700 mb-2">Processed Image</h2>
-                                        <Image
-                                            src={processedImage}
-                                            alt="Processed Image"
-                                            width={500}
-                                            height={500}
-                                            className="w-full h-auto rounded-md object-contain"
-                                        />
-                                        <div className="mt-4 space-y-2">
-                                            <button
-                                                onClick={() => handleDownload(processedImage, "processed-image.png")}
-                                                className="w-full px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors"
-                                            >
-                                                Download Processed Image
-                                            </button>
-                                            {!tintedImage && (
-                                                <button
-                                                    onClick={handleTint}
-                                                    disabled={loading}
-                                                    className="w-full bg-[#1A3CFF] text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
-                                                >
-                                                    {loading ? "Processing..." : "Apply Base Tint"}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                <div>
+                  <label htmlFor="projectType" className="block mb-2 text-white">
+                    Select Project Type
+                  </label>
+                  <select
+                    id="projectType"
+                    value={projectType}
+                    onChange={handleProjectTypeChange}
+                    className="w-full p-2 border border-gray-300 rounded-md text-gray-700 bg-white"
+                  >
+                    {projectTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                            {tintedImage && (
-                                <div className="mt-6">
-                                    <h2 className="text-lg font-semibold text-gray-700 mb-2">Tinted Image</h2>
-                                    <Image
-                                        src={tintedImage}
-                                        alt="Tinted Image"
-                                        width={500}
-                                        height={500}
-                                        className="w-full h-auto rounded-md object-contain"
-                                    />
-                                    <button
-                                        onClick={() => handleDownload(tintedImage, "tinted-image.png")}
-                                        className="mt-4 w-full px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors"
-                                    >
-                                        Download Tinted Image
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                <div>
+                  <label htmlFor="backgroundChoice" className="block mb-2 text-white">
+                    Select Background ({backgrounds.length} available)
+                  </label>
+                  <select
+                    id="backgroundChoice"
+                    value={backgroundChoice}
+                    onChange={handleBackgroundChange}
+                    className="w-full p-2 border border-gray-300 rounded-md text-gray-700 bg-white"
+                    disabled={backgrounds.length === 0}
+                  >
+                    {backgrounds.length > 0 ? (
+                      backgrounds.map((bg) => (
+                        <option key={bg} value={bg}>
+                          {bg}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No backgrounds available</option>
+                    )}
+                  </select>
+                </div>
 
-                        {error && (
-                            <div className="mt-4 text-red-500 text-center">
-                                Error: {error}
-                            </div>
-                        )}
+                <button
+                  type="submit"
+                  disabled={loading || backgrounds.length === 0 || !selectedImage}
+                  className="w-full bg-[#1A3CFF] text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
+                >
+                  {loading ? "Processing..." : "Update Background"}
+                </button>
+              </form>
+
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {selectedImage && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-white mb-2">Preview</h2>
+                    <Image
+                      src={selectedImage}
+                      alt="Preview"
+                      width={500}
+                      height={500}
+                      className="w-full h-auto rounded-md object-contain bg-white"
+                    />
+                  </div>
+                )}
+                {processedImage && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-white mb-2">Processed Image</h2>
+                    <Image
+                      src={processedImage}
+                      alt="Processed Image"
+                      width={500}
+                      height={500}
+                      className="w-full h-auto rounded-md object-contain bg-white"
+                    />
+                    <div className="mt-4 space-y-2">
+                      <button
+                        onClick={() => handleDownload(processedImage, "processed-image.png")}
+                        className="w-full px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors"
+                      >
+                        Download Processed Image
+                      </button>
+                      {!tintedImage && (
+                        <button
+                          onClick={handleTint}
+                          disabled={loading}
+                          className="w-full bg-[#1A3CFF] text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
+                        >
+                          {loading ? "Processing..." : "Apply Base Tint"}
+                        </button>
+                      )}
                     </div>
-                </main>
+                  </div>
+                )}
+              </div>
+
+              {tintedImage && (
+                <div className="mt-6">
+                  <h2 className="text-lg font-semibold text-white mb-2">Tinted Image</h2>
+                  <Image
+                    src={tintedImage}
+                    alt="Tinted Image"
+                    width={500}
+                    height={500}
+                    className="w-full h-auto rounded-md object-contain bg-white"
+                  />
+                  <button
+                    onClick={() => handleDownload(tintedImage, "tinted-image.png")}
+                    className="mt-4 w-full px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors"
+                  >
+                    Download Tinted Image
+                  </button>
+                </div>
+              )}
             </div>
-        </div>
-    );
+
+            {error && (
+              <div className="mt-4 text-red-500 text-center">
+                Error: {error}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
 }
