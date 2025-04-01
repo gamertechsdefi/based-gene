@@ -4,7 +4,7 @@ import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Image from "next/image";
 import Header from "@/components/Header";
 
-const BACKEND_URL = "http://localhost:5000"; // Centralized backend URL
+const BACKEND_URL = "https://based-gene-api.vercel.app/"; // Centralized backend URL
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
