@@ -4,26 +4,27 @@ import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Image from "next/image";
 import Header from "@/components/Header";
 
-const BACKEND_URL = "https://based-gene-api.vercel.app"; // Centralized backend URL
+const BACKEND_URL = ""; // Empty for relative paths within the same app
 
 export default function Home() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [tintedImage, setTintedImage] = useState<string | null>(null);
-  const [projectType, setProjectType] = useState<string>("base");
+  const [projectType, setProjectType] = useState<string>("wkc");
   const [backgroundChoice, setBackgroundChoice] = useState<string>("background1.png");
   const [backgrounds, setBackgrounds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const projectTypes = ["base", "send", "enb"];
+  const projectTypes = ["wkc", "dtg", "smcdao"];
 
   // Fetch available backgrounds for the selected project type
   useEffect(() => {
     async function fetchBackgrounds() {
       try {
-        console.log(`Fetching backgrounds from: ${BACKEND_URL}/background-count?projectType=${projectType}`);
-        const response = await fetch(`${BACKEND_URL}/background-count?projectType=${projectType}`);
+        console.log(`Fetching backgrounds from: /api/background-count?projectType=${projectType}`);
+        const response = await fetch(`/api/background-count?projectType=${projectType}`);
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Failed to fetch backgrounds: ${response.status} - ${errorText}`);
@@ -31,7 +32,11 @@ export default function Home() {
         const data = await response.json();
         console.log("Backgrounds received:", data);
         setBackgrounds(data.backgrounds || []);
-        setBackgroundChoice(data.backgrounds[0] || ""); // Default to first or empty
+        if (data.backgrounds && data.backgrounds.length > 0) {
+          setBackgroundChoice(data.backgrounds[0]);
+        } else {
+          setBackgroundChoice("");
+        }
       } catch (err) {
         const errorMessage = (err as Error).message || "Could not fetch backgrounds";
         console.error("Fetch error:", err);
@@ -46,6 +51,7 @@ export default function Home() {
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       setSelectedImage(URL.createObjectURL(file));
       setProcessedImage(null);
       setTintedImage(null);
@@ -63,7 +69,7 @@ export default function Home() {
 
   const handleBackgroundUpdate = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedImage) {
+    if (!selectedFile) {
       setError("Please select an image first");
       return;
     }
@@ -73,13 +79,14 @@ export default function Home() {
     setProcessedImage(null);
     setTintedImage(null);
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData();
+    formData.append("image", selectedFile);
     formData.append("projectType", projectType);
     formData.append("backgroundChoice", backgroundChoice);
 
     try {
-      console.log(`Sending to ${BACKEND_URL}/upload`);
-      const response = await fetch(`${BACKEND_URL}/upload`, {
+      console.log(`Sending to /api/upload`);
+      const response = await fetch(`/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -121,8 +128,8 @@ export default function Home() {
       const formData = new FormData();
       formData.append("image", blob, "processed-image.png");
 
-      console.log(`Sending to ${BACKEND_URL}/tint`);
-      const tintResponse = await fetch(`${BACKEND_URL}/tint`, {
+      console.log(`Sending to /api/tint`);
+      const tintResponse = await fetch(`/api/tint`, {
         method: "POST",
         body: formData,
       });
