@@ -11,13 +11,13 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [tintedImage, setTintedImage] = useState<string | null>(null);
-  const [projectType, setProjectType] = useState<string>("wkc");
+  const [projectType, setProjectType] = useState<string>("morph");
   const [backgroundChoice, setBackgroundChoice] = useState<string>("background1.png");
   const [backgrounds, setBackgrounds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const projectTypes = ["wkc", "dtg", "smcdao"];
+  const projectTypes = ["morph"];
 
   // Fetch available backgrounds for the selected project type
   useEffect(() => {
@@ -179,7 +179,7 @@ export default function Home() {
         <main className="flex-grow mt-16 px-4 py-8 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <div className="bg-neutral-800 p-6 rounded-lg shadow-md">
-              <h1 className="text-3xl font-bold text-[#1A3CFF] mb-6 text-center">
+              <h1 className="text-3xl font-bold text-green-500 mb-6 text-center">
                 Background Updater
               </h1>
               <form onSubmit={handleBackgroundUpdate} className="space-y-4">
@@ -194,7 +194,7 @@ export default function Home() {
                     accept="image/*"
                     onChange={handleImageChange}
                     required
-                    className="w-full p-2 border-2 border-dashed border-[#66D4FF] rounded-md text-gray-700 bg-white"
+                    className="w-full p-2 border-2 border-dashed border-green-300 rounded-md text-gray-700 bg-white"
                   />
                 </div>
 
@@ -206,7 +206,7 @@ export default function Home() {
                     id="projectType"
                     value={projectType}
                     onChange={handleProjectTypeChange}
-                    className="w-full p-2 border border-gray-300 rounded-md text-gray-700 bg-white"
+                    className="w-full p-2 border border-green-300 rounded-md text-gray-700 bg-white"
                   >
                     {projectTypes.map((type) => (
                       <option key={type} value={type}>
@@ -224,7 +224,7 @@ export default function Home() {
                     id="backgroundChoice"
                     value={backgroundChoice}
                     onChange={handleBackgroundChange}
-                    className="w-full p-2 border border-gray-300 rounded-md text-gray-700 bg-white"
+                    className="w-full p-2 border border-green-300 rounded-md text-gray-700 bg-white"
                     disabled={backgrounds.length === 0}
                   >
                     {backgrounds.length > 0 ? (
@@ -242,7 +242,7 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={loading || backgrounds.length === 0 || !selectedImage}
-                  className="w-full bg-[#1A3CFF] text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
                 >
                   {loading ? "Processing..." : "Update Background"}
                 </button>
@@ -274,7 +274,7 @@ export default function Home() {
                     <div className="mt-4 space-y-2">
                       <button
                         onClick={() => handleDownload(processedImage, "processed-image.png")}
-                        className="w-full px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors"
+                        className="w-full px-4 py-2 bg-green-700 text-white font-bold rounded-md hover:bg-green-800 transition-colors"
                       >
                         Download Processed Image
                       </button>
@@ -282,7 +282,7 @@ export default function Home() {
                         <button
                           onClick={handleTint}
                           disabled={loading}
-                          className="w-full bg-[#1A3CFF] text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
+                          className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-[#66D4FF] transition-colors disabled:opacity-50"
                         >
                           {loading ? "Processing..." : "Apply Base Tint"}
                         </button>
@@ -304,7 +304,7 @@ export default function Home() {
                   />
                   <button
                     onClick={() => handleDownload(tintedImage, "tinted-image.png")}
-                    className="mt-4 w-full px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors"
+                    className="mt-4 w-full px-4 py-2 bg-green-700 text-white font-bold rounded-md hover:bg-green-800 transition-colors"
                   >
                     Download Tinted Image
                   </button>

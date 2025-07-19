@@ -116,7 +116,7 @@ export default function Home() {
                     />
                     <button
                       onClick={() => handleDownload(tintedImage, "tinted-image.png")}
-                      className="mt-4 w-full px-4 py-2 bg-blue-700 text-white font-bold rounded-md hover:bg-blue-800 transition-colors"
+                      className="mt-4 w-full px-4 py-2 bg-green-700 text-white font-bold rounded-md hover:bg-green-800 transition-colors"
                     >
                       Download Tinted Image
                     </button>
